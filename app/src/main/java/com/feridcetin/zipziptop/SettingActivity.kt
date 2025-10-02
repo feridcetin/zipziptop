@@ -18,6 +18,9 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.AdError
+import com.google.android.gms.ads.OnUserEarnedRewardListener // Yeni import
 
 class SettingActivity : AppCompatActivity()  {
 
@@ -192,7 +195,7 @@ class SettingActivity : AppCompatActivity()  {
 
     private fun loadRewardedAd() {
         val adRequest = AdRequest.Builder().build()
-        RewardedAd.load(this, "ca-app-pub-2120666198065087/7475733865", adRequest, object : RewardedAdLoadCallback() {
+        RewardedAd.load(this, "ca-app-pub-2120666198065087/9415118995", adRequest, object : RewardedAdLoadCallback() {
             override fun onAdFailedToLoad(adError: LoadAdError) {
                 mRewardedAd = null
             }
@@ -202,6 +205,7 @@ class SettingActivity : AppCompatActivity()  {
         })
     }
 
+    /*
     private fun showRewardedAd() {
         if (mRewardedAd != null) {
             mRewardedAd?.show(this) {
@@ -210,6 +214,47 @@ class SettingActivity : AppCompatActivity()  {
                 finish()
             }
         } else {
+            Toast.makeText(this,R.string.showRewardedAdElse, Toast.LENGTH_SHORT).show()
+        }
+    }*/
+
+    private fun showRewardedAd() {
+        if (mRewardedAd != null) {
+
+            mRewardedAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
+
+                // Reklam ekrandan kaldırıldığında (kullanıcı kapattığında)
+                override fun onAdDismissedFullScreenContent() {
+                    // Bu noktada sadece reklam kapatıldı, ödül verilmiş de olabilir, verilmemiş de.
+                    // Ödül mantığı zaten aşağıda halledildi.
+                    Log.d("RewardedAd", "Reklam kapatıldı.")
+                    loadRewardedAd() // Yeni bir reklam yükle
+                }
+
+                // Reklam gösterilemediğinde
+                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    Log.e("RewardedAd", "Reklam gösterilemedi: " + adError.message)
+                    Toast.makeText(this@SettingActivity, getString(R.string.showRewardedAdElse), Toast.LENGTH_SHORT).show()
+                    mRewardedAd = null // Reklamı sıfırla
+                    loadRewardedAd() // Yeni reklam yükle
+                }
+
+                // Reklam gösterildiğinde
+                override fun onAdShowedFullScreenContent() {
+                    Log.d("RewardedAd", "Reklam gösterildi.")
+                }
+            }
+
+            // Ödülü sadece kullanıcı izleyerek kazandığında ver!
+            mRewardedAd?.show(this) {
+                // SADECE VE SADECE BU BLOK ÇALIŞIRSA ÖDÜL VERİLİR (yani reklam başarıyla izlenmiştir)
+                saveCharacterSelection() // Karakteri KESİNLİKLE BURADA KAYDET!
+                Toast.makeText(this, R.string.showRewardedAd, Toast.LENGTH_LONG).show()
+                finish() // Ayarlar ekranını kapat.
+            }
+
+        } else {
+            // Reklam yüklenmediyse: Ödül verilmez ve uyarı gösterilir.
             Toast.makeText(this,R.string.showRewardedAdElse, Toast.LENGTH_SHORT).show()
         }
     }

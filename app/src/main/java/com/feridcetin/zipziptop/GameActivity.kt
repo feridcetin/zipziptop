@@ -18,13 +18,16 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.google.android.gms.ads.rewarded.RewardItem
+import com.google.android.gms.ads.FullScreenContentCallback // Gerekirse eklemek faydalı
+import com.google.android.gms.ads.OnUserEarnedRewardListener
+
 
 class GameActivity : AppCompatActivity() {
 
     private lateinit var gameView: GameView
     private var mRewardedAd: RewardedAd? = null
 
-    private lateinit var adViewTop: AdView
     private lateinit var adViewBottom: AdView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,26 +36,13 @@ class GameActivity : AppCompatActivity() {
 
         MobileAds.initialize(this) {}
 
-        adViewTop = findViewById(R.id.adViewTop)
-        val adRequestTop = AdRequest.Builder().build()
-        adViewTop.loadAd(adRequestTop)
 
         adViewBottom = findViewById(R.id.adViewBottom)
         val adRequestBottom = AdRequest.Builder().build()
         adViewBottom.loadAd(adRequestBottom)
 
-        /*
+
         // Reklam dinleyicilerini ekleyin
-        adViewTop.adListener = object : AdListener() {
-            override fun onAdLoaded() {
-                // Reklam başarılı bir şekilde yüklendiğinde görünür yap
-                adViewTop.visibility = View.VISIBLE
-            }
-            override fun onAdFailedToLoad(adError: LoadAdError) {
-                // Reklam yüklenemezse görünmez yap
-                adViewTop.visibility = View.GONE
-            }
-        }
         adViewBottom.adListener = object : AdListener() {
             override fun onAdLoaded() {
                 adViewBottom.visibility = View.VISIBLE
@@ -61,7 +51,7 @@ class GameActivity : AppCompatActivity() {
                 adViewBottom.visibility = View.GONE
             }
         }
-        */
+
 
         gameView = GameView(this)
         findViewById<FrameLayout>(R.id.gameContainer).addView(gameView)
@@ -83,7 +73,7 @@ class GameActivity : AppCompatActivity() {
         }
         onBackPressedDispatcher.addCallback(this, callback)
     }
-
+/*
     fun showRewardedAd() {
         if (mRewardedAd != null) {
             mRewardedAd?.show(this) { rewardItem ->
@@ -95,10 +85,42 @@ class GameActivity : AppCompatActivity() {
             loadRewardedAd()
         }
     }
+ */
+
+    fun showRewardedAd() {
+        if (mRewardedAd != null) {
+            // Tam ekran geri çağrımını ayarlamak, hata durumlarını yönetmek için önemlidir.
+            mRewardedAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
+                // Reklam gösterilemezse (ekran hatası vb.)
+                override fun onAdFailedToShowFullScreenContent(p0: com.google.android.gms.ads.AdError) {
+                    Log.e("RewardedAd", "Reklam gösterilemedi: " + p0.message)
+                }
+
+                // Reklam kapatıldığında (ödül verilmiş olabilir veya olmamış olabilir)
+                override fun onAdDismissedFullScreenContent() {
+                    Log.d("RewardedAd", "Reklam kapatıldı.")
+                    // Yeni bir reklam yükle
+                    loadRewardedAd()
+                }
+            }
+
+            // Ödülün KESİNLİKLE sadece izlendikten sonra verilmesini sağlayan kısım:
+            mRewardedAd?.show(this, object : OnUserEarnedRewardListener {
+                override fun onUserEarnedReward(rewardItem: RewardItem) {
+                    // *** YALNIZCA BU BLOK ÇALIŞIRSA ÖDÜLÜ VERİN! ***
+                    gameView.grantLifeAndShowResumeDialog()
+                }
+            })
+
+        } else {
+            // Reklam yüklü değilse/yoksa: Ödül verilmez, kullanıcı bilgilendirilir.
+            loadRewardedAd() // Tekrar yüklemeyi dene
+        }
+    }
 
     private fun loadRewardedAd() {
         val adRequest = AdRequest.Builder().build()
-        RewardedAd.load(this, "ca-app-pub-3940256099942544/5224354917", adRequest, object : RewardedAdLoadCallback() {
+        RewardedAd.load(this, "ca-app-pub-2120666198065087/9415118995", adRequest, object : RewardedAdLoadCallback() {
             override fun onAdFailedToLoad(adError: LoadAdError) {
                 mRewardedAd = null
             }
@@ -112,20 +134,17 @@ class GameActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         gameView.pause()
-        adViewTop.pause()
         adViewBottom.pause()
     }
 
     override fun onResume() {
         super.onResume()
         gameView.resume()
-        adViewTop.resume()
         adViewBottom.resume()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        adViewTop.destroy()
         adViewBottom.destroy()
     }
 

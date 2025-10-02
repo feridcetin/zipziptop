@@ -17,13 +17,12 @@ class ScoreboardActivity : AppCompatActivity() {
     private lateinit var textViewHighScore: TextView
     private lateinit var btnBackToMenu: Button
 
-    private lateinit var adViewTop: AdView
     private lateinit var adViewBottom: AdView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scoreboard)
-        adViewTop = findViewById(R.id.adViewTopScore)
+       // adViewTop = findViewById(R.id.adViewTopScore)
         adViewBottom = findViewById(R.id.adViewBottomScore)
         loadBannerAds() // Yeni reklam yükleme metodunu çağırın
         sharedPref = getSharedPreferences("JumpHeroPrefs", Context.MODE_PRIVATE)
@@ -47,7 +46,7 @@ class ScoreboardActivity : AppCompatActivity() {
         val adRequest = AdRequest.Builder().build()
 
         // Üst reklamı yükle
-        adViewTop.loadAd(adRequest)
+       // adViewTop.loadAd(adRequest)
 
         // Alt reklamı yükle
         adViewBottom.loadAd(adRequest)
