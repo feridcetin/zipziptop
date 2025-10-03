@@ -32,16 +32,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
     private var lives: Int = 3
 
     private var level: Int = 1
-    private val scoreToLevelUp: Int = 15
+    private val scoreToLevelUp: Int = 20
     private var previousScoreForLevel: Int = 0
-    private var obstacleSpeed: Float = 10f
-    private var savedObstacleSpeed: Float = 10f // Oyun hızını saklamak için yeni değişken
+    private var obstacleSpeed: Float = 5f
+    private var savedObstacleSpeed: Float = 0.1f // Oyun hızını saklamak için yeni değişken
 
     private var isPaused = false
     private var isBonusLifeGiven: Boolean = false
 
     private val baseObstacleHeight: Float = 200f
-    private val heightIncreasePerLevel: Float = 20f
+    private val heightIncreasePerLevel: Float = 15f
 
     private val obstaclePaint = Paint()
     private val scoreTextPaint = Paint()
@@ -53,7 +53,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
     private var characterY: Float = 0f
     private var characterVelocity: Float = 0f
     private val gravity: Float = 1f
-    private val jumpPower: Float = -15f
+    private val jumpPower: Float = -12f //karakter zıplaması
     private val obstacles = CopyOnWriteArrayList<Obstacle>()
     private val obstacleGap = 600f
     private val obstacleSpacing = 600f
@@ -92,6 +92,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
     private var loseMusicEnabled: Boolean = false
 
     private var selectedBackgroundResId: Int = R.drawable.background // Varsayılan arka planınız
+
+
+    private var currentAlertDialog: AlertDialog? = null
+
+    private var invulnerabilityEndTime: Long = 0L // Dokunulmazlık süresinin bitiş zamanı
+    private val invulnerabilityDurationMs: Long = 1000L // 1 saniye dokunulmazlık süresi (milisaniye)
+
+    private var isHandlingCollision: Boolean = false // Çarpışma işleme durumunu kilitler
 
 
     init {
@@ -242,8 +250,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
                 }
             }
         }
-
+/*
         if (collisionOccurred) {
+            if (System.currentTimeMillis() < invulnerabilityEndTime) {
+                return // Çarpışmayı görmezden gel ve update döngüsünden çık
+            }
             if (loseMusicEnabled) {
                 playMusic(selectedLoseMusicId)
             }
@@ -257,6 +268,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
             }
             return
         }
+*/
+        if (collisionOccurred && !isHandlingCollision) {
+            handleCollision() // Yeni metodu çağır
+            return // Bu karede daha fazla işlem yapılmasını engelle
+        }
 
         for (obstacle in obstacles) {
             obstacle.x -= obstacleSpeed
@@ -264,22 +280,73 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
                 obstacles.remove(obstacle)
                 addNewObstacle()
                 score++
-
+                /*
                 if (score > previousScoreForLevel && score % scoreToLevelUp == 0) {
                     level++
                     previousScoreForLevel = score
-                    obstacleSpeed += 1f
+                    obstacleSpeed += 0.4f
                     isBonusLifeGiven = false
+                }
+                */
+                if (score > previousScoreForLevel && score % scoreToLevelUp == 0) {
+                    level++
+                    previousScoreForLevel = score
+                    obstacleSpeed += 0.5f
+
+                    // Seviye atlandığına göre, canı hemen ver.
+                    if (level > 1) {
+                        if (winMusicEnabled) {
+                            playMusic(selectedWinMusicId)
+                        }
+                        lives++
+                        postInvalidate()
+                        //showBonusLifeDialog()
+
+                        // ÖNEMLİ: Bu noktada isBonusLifeGiven'ı kullanmaya gerek yok,
+                        // çünkü bu blok sadece puan şartı sağlandığında bir kez çalışır.
+                        // Ancak, isBonusLifeGiven değişkenini ileride reklam veya
+                        // başka bir amaçla kullanmak için, level up olduğunda FALSE yapalım
+                        // ki bir sonraki level'a hazır olsun.
+                        isBonusLifeGiven = false // Bir sonraki level için temizlik
+                    }
                 }
             }
         }
 
-        if (level > 0 && level % 3 == 0 && !isBonusLifeGiven) {
+       // if (level > 0 && level % 3 == 0 && !isBonusLifeGiven) { seviye mantığı kaldırıldı
+        /*if (level > 1 && !isBonusLifeGiven) {
             if (winMusicEnabled) {
                 playMusic(selectedWinMusicId)
             }
             lives++
+            postInvalidate()
             isBonusLifeGiven = true
+        }
+        */
+    }
+    private fun handleCollision() {
+        isHandlingCollision = true // İşlemi KİLİTLE: Başka bir çarpışma algılaması devre dışı
+
+        if (loseMusicEnabled) {
+            playMusic(selectedLoseMusicId)
+        }
+
+        lives--
+
+        if (lives <= 0) {
+            // Oyun Bitti akışı
+            isGameOver = true
+            (context as GameActivity).saveHighScore(score)
+            setPaused(true)
+            showGameOverDialog()
+        } else {
+            // Oyunu güvenle sıfırla
+            resetCharacterAndObstacles()
+        }
+
+        // KİLİDİ AÇMA: Karakter sıfırlandıktan sonra, bir sonraki çizim döngüsünde kilidi aç
+        post {
+            isHandlingCollision = false
         }
     }
 
@@ -323,6 +390,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
             val scoreTextWidth = scoreTextPaint.measureText(scoreText)
             canvas.drawText(scoreText, scoreIconLeft - scoreTextWidth - 10f, scoreIconTop + uiIconSize / 2 + scoreTextPaint.textSize / 3, scoreTextPaint)
 
+            ///seviye gösterimi gizlendi.
+            /*
             val levelIconRight = screenWidth.toFloat() - 20f
             val levelIconLeft = levelIconRight - uiIconSize
             val levelIconTop = 130f
@@ -334,6 +403,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
 
             canvas.drawRect(0f, screenHeight.toFloat() - 20f, screenWidth.toFloat(), screenHeight.toFloat(), bottomBoundaryPaint)
             canvas.drawRect(0f, 0f, screenWidth.toFloat(), 20f, bottomBoundaryPaint)
+            */
 
             if (isPaused) {
                 canvas.drawRect(0f, 0f, screenWidth.toFloat(), screenHeight.toFloat(), pauseOverlayPaint)
@@ -414,10 +484,19 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
 
     fun showGameOverDialog() {
         (context as GameActivity).runOnUiThread {
+
+            // Önceki diyalog varsa kapat ve referansı sıfırla
+            currentAlertDialog?.dismiss()
+            currentAlertDialog = null
+
             val builder = AlertDialog.Builder(context)
             val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_custom, null)
             builder.setView(dialogView)
-            val dialog = builder.create()
+
+            // Yeni diyalog nesnesini global değişkene ata
+            currentAlertDialog = builder.create()
+            val dialog = currentAlertDialog!! // Yerel kodun kolaylığı için hala 'dialog' olarak kullanabiliriz.
+
 
             val dialogTitle = dialogView.findViewById<TextView>(R.id.dialog_title)
             val dialogMessage = dialogView.findViewById<TextView>(R.id.dialog_message)
@@ -433,10 +512,18 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
                 negativeButton.text = context.getString(R.string.no_button)
 
                 positiveButton.setOnClickListener {
-                    dialog.dismiss()
+                  /*  dialog.dismiss()
                     setPaused(true) // Reklam izlemek istendiğinde müziği duraklat
                     savedObstacleSpeed = obstacleSpeed // Mevcut hızı kaydet
                     (context as GameActivity).showRewardedAd()
+                   */
+                    // Önce diyalog kapanır. Bu tek başına çalışır, çakışma riski azalır.
+                    dialog.dismiss()
+                    currentAlertDialog?.dismiss()
+                    currentAlertDialog = null
+                    // Hemen ardından GameActivity'deki yeni metot çağrılarak reklam akışı başlatılır.
+                    (context as GameActivity).startAdSequenceForLife(obstacleSpeed)
+
                 }
                 negativeButton.setOnClickListener {
                     dialog.dismiss()
@@ -467,6 +554,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
     fun grantLifeAndShowResumeDialog() {
         Log.d("GameView", "Reklam izlendi, can hakkı verildi.")
         lives++
+        postInvalidate()
         showResumeDialog()
     }
 
@@ -492,11 +580,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
             positiveButton.setOnClickListener {
                 dialog.dismiss()
 
+                currentAlertDialog = null
                 obstacleSpeed = savedObstacleSpeed // Kaydedilmiş hızı geri yükle
                 resetCharacterAndObstacles()
                 isGameOver = false
-                setPaused(false) // Oyun devam ettiğinde müziği tekrar başlat
-                resume()
+                post {
+                    invulnerabilityEndTime = System.currentTimeMillis() + invulnerabilityDurationMs // <-- DOKUNULMAZLIĞI BAŞLAT
+
+                    setPaused(false) // Oyun devam ettiğinde müziği tekrar başlat
+                    resume()
+                }
             }
 
             dialog.setCancelable(false)
@@ -525,6 +618,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
 
             positiveButton.setOnClickListener {
                 dialog.dismiss()
+                currentAlertDialog = null
             }
 
             dialog.setCancelable(false)
@@ -537,7 +631,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
         lives = 3
         level = 1
         previousScoreForLevel = 0
-        obstacleSpeed = 10f
+        obstacleSpeed = 5f
         characterY = (screenHeight / 2).toFloat()
         characterVelocity = 0f
         obstacles.clear()
@@ -572,5 +666,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
         val width = 100f
         val top = y - height / 2
         val bottom = y + height / 2
+    }
+
+    fun setSavedObstacleSpeed(speed: Float) {
+        savedObstacleSpeed = speed
     }
 }

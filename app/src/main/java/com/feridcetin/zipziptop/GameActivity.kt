@@ -161,4 +161,16 @@ class GameActivity : AppCompatActivity() {
             }
         }
     }
+
+    /// diyalog için eklendi
+
+    fun startAdSequenceForLife(currentObstacleSpeed: Float) {
+        // 1. Gerekli GameView durumlarını ayarla
+        gameView.setPaused(true)
+        // Bu, GameView'a yeni ekleyeceğimiz metottur.
+        gameView.setSavedObstacleSpeed(currentObstacleSpeed)
+
+        // 2. Ödüllü reklamı göster
+        showRewardedAd()
+    }
 }
