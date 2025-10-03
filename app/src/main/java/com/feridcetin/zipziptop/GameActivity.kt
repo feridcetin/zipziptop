@@ -18,6 +18,7 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import android.widget.Toast
 import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.FullScreenContentCallback // Gerekirse eklemek faydalı
 import com.google.android.gms.ads.OnUserEarnedRewardListener
@@ -114,6 +115,7 @@ class GameActivity : AppCompatActivity() {
 
         } else {
             // Reklam yüklü değilse/yoksa: Ödül verilmez, kullanıcı bilgilendirilir.
+            Toast.makeText(this, R.string.showRewardedAdElse, Toast.LENGTH_SHORT).show()
             loadRewardedAd() // Tekrar yüklemeyi dene
         }
     }

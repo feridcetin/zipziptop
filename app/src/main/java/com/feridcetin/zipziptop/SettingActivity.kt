@@ -216,7 +216,7 @@ class SettingActivity : AppCompatActivity()  {
         } else {
             Toast.makeText(this,R.string.showRewardedAdElse, Toast.LENGTH_SHORT).show()
         }
-    }*/
+    }
 
     private fun showRewardedAd() {
         if (mRewardedAd != null) {
@@ -257,8 +257,42 @@ class SettingActivity : AppCompatActivity()  {
             // Reklam yüklenmediyse: Ödül verilmez ve uyarı gösterilir.
             Toast.makeText(this,R.string.showRewardedAdElse, Toast.LENGTH_SHORT).show()
         }
-    }
+    }*/
+    private fun showRewardedAd() {
+        if (mRewardedAd != null) {
 
+            // Reklam geri çağırmalarını ayarla (Hata/Kapatma yönetimi için)
+            mRewardedAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
+
+                override fun onAdDismissedFullScreenContent() {
+                    Log.d("RewardedAd", "Reklam kapatıldı.")
+                    // Ödül mantığı sadece onUserEarnedReward içinde olduğu için burada bir şey yapmaya gerek yok.
+                    loadRewardedAd() // Yeni bir reklam yükle
+                }
+
+                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    Log.e("RewardedAd", "Reklam gösterilemedi: " + adError.message)
+                    Toast.makeText(this@SettingActivity, getString(R.string.showRewardedAdElse), Toast.LENGTH_SHORT).show()
+                    mRewardedAd = null
+                    loadRewardedAd()
+                }
+            }
+
+            // 🚨 KRİTİK DÜZELTME: ÖDÜLÜ SADECE BU LİSTENER İÇİNDE VER 🚨
+            mRewardedAd?.show(this, object : OnUserEarnedRewardListener {
+                override fun onUserEarnedReward(rewardItem: com.google.android.gms.ads.rewarded.RewardItem) {
+                    // SADECE VE SADECE BU BLOK ÇALIŞIRSA KARAKTER KAYDEDİLİR!
+                    saveCharacterSelection() // Karakteri KESİNLİKLE BURADA KAYDET!
+                    Toast.makeText(this@SettingActivity, R.string.showRewardedAd, Toast.LENGTH_LONG).show()
+                    finish() // Ayarlar ekranını kapat.
+                }
+            })
+
+        } else {
+            // Reklam yüklü değilse: Ödül verilmez, kullanıcı bilgilendirilir.
+            Toast.makeText(this,R.string.showRewardedAdElse, Toast.LENGTH_SHORT).show()
+        }
+    }
     private fun saveCharacterSelection() {
         with(sharedPref.edit()) {
             putInt("selected_character_color", selectedCharacterColor)
