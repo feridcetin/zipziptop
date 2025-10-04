@@ -173,4 +173,36 @@ class GameActivity : AppCompatActivity() {
         // 2. Ödüllü reklamı göster
         showRewardedAd()
     }
+
+    /*
+    fun showRewardedAdForScore() {
+        if (mRewardedAd != null) {
+            mRewardedAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
+                override fun onAdFailedToShowFullScreenContent(p0: com.google.android.gms.ads.AdError) {
+                    Log.e("RewardedAd", "Skor Reklamı gösterilemedi: " + p0.message)
+                    Toast.makeText(this@GameActivity, R.string.showRewardedAdElse, Toast.LENGTH_SHORT).show()
+                    // Reklam gösterilemezse, kullanıcıya normal oyunu bitirme diyaloğunu tekrar göster
+                    gameView.showGameOverDialog(isAdError = true)
+                }
+
+                override fun onAdDismissedFullScreenContent() {
+                    Log.d("RewardedAd", "Skor Reklamı kapatıldı.")
+                    loadRewardedAd() // Yeni bir reklam yükle
+                }
+            }
+
+            mRewardedAd?.show(this, object : OnUserEarnedRewardListener {
+                override fun onUserEarnedReward(rewardItem: RewardItem) {
+                    // *** YALNIZCA BU BLOK ÇALIŞIRSA SKOR ÇARPANINI UYGULA ***
+                    gameView.grantScoreMultiplier()
+                }
+            })
+
+        } else {
+            loadRewardedAd() // Tekrar yüklemeyi dene
+            // Reklam yüklü değilse, kullanıcıya normal oyunu bitirme diyaloğunu tekrar göster
+            gameView.showGameOverDialog(isAdError = true)
+        }
+    }
+     */
 }

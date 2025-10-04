@@ -16,25 +16,13 @@ import android.view.SurfaceView
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import java.util.Random
 import java.util.concurrent.CopyOnWriteArrayList
 
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, Runnable {
 
-    private var thread: Thread? = null
-    private var isPlaying = false
-    private var isGameOver = false
-    private var isReady = false
-    private var screenWidth: Int = 0
-    private var screenHeight: Int = 0
-    private var score: Int = 0
-    private var lives: Int = 3
-
-    private var level: Int = 1
-    private val scoreToLevelUp: Int = 20
-    private var previousScoreForLevel: Int = 0
-    private var obstacleSpeed: Float = 5f
     private var savedObstacleSpeed: Float = 0.1f // Oyun hızını saklamak için yeni değişken
 
     private var isPaused = false
@@ -101,6 +89,67 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
 
     private var isHandlingCollision: Boolean = false // Çarpışma işleme durumunu kilitler
 
+
+    private var finalScoreBeforeMultiplier: Int = 0 // Çarpan uygulanmadan önceki son skoru tutar
+
+
+    private var screenWidth: Int = 0
+    private var screenHeight: Int = 0
+    private var score: Int = 0
+    private var lives: Int = 3
+
+    private var level: Int = 1
+
+    private var previousScoreForLevel: Int = 0
+    private val scoreToLevelUp: Int = 20
+
+    private var obstacleSpeed: Float = 5f
+
+    private var isPlaying = false
+    private var isGameOver = false
+
+    private var thread: Thread? = null
+
+    private var isReady = false
+
+    private fun resetGame() {
+       /* score = 0
+        lives = 3
+        level = 1
+        previousScoreForLevel = 0
+        obstacleSpeed = 5f
+        characterY = (screenHeight / 2).toFloat()
+        characterVelocity = 0f
+        obstacles.clear()
+        createInitialObstacles()
+        isGameOver = false
+        isBonusLifeGiven = false
+        isPlaying = true
+        thread = Thread(this)
+        thread?.start()
+        isReady = true
+        */
+        // *** KRİTİK DÜZELTME: OYUN HIZINI SIFIRLA ***
+        obstacleSpeed = 0.9f // <-- BAŞLANGIÇ HIZI DEĞERİNİZİ BURAYA YAZIN
+
+        // Temel Oyun Durumu Sıfırlamaları
+        score = 0
+        level = 1
+        previousScoreForLevel = 0
+        lives = 3 // <-- Başlangıç Can Sayınız (Eğer 3 ise 3, farklıysa o değeri kullanın)
+        isGameOver = false
+        isBonusLifeGiven = false
+
+        // Karakter ve Engelleri Sıfırla
+        resetCharacterAndObstacles() // <-- Bu metot, karakteri ve engelleri sıfırlar
+
+        // Eğer oyun duraklatılmışsa, devam etmesini sağla
+        setPaused(false)
+        resume()
+
+        // Ekranı yeni can ve skor ile hemen güncelle
+        postInvalidate()
+    }
 
     init {
         holder.addCallback(this)
@@ -482,7 +531,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
         thread?.start()
     }
 
-    fun showGameOverDialog() {
+    fun showGameOverDialog(isAdError: Boolean = false) {
         (context as GameActivity).runOnUiThread {
 
             // Önceki diyalog varsa kapat ve referansı sıfırla
@@ -504,7 +553,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
             val negativeButton = dialogView.findViewById<Button>(R.id.negative_button)
 
             dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
+/*
             if (lives <= 0) {
                 dialogTitle.text = context.getString(R.string.game_over_title)
                 dialogMessage.text = context.getString(R.string.game_over_message, score)
@@ -530,7 +579,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
                     (context as GameActivity).saveHighScore(score) // Bu satırı ekleyin
                     (context as GameActivity).finish()
                 }
-            } else {
+            }else {
+
                 dialogTitle.text = context.getString(R.string.game_over_title)
                 dialogMessage.text = context.getString(R.string.game_over_message, score)
                 positiveButton.text = context.getString(R.string.restart_button)
@@ -546,6 +596,86 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
                     (context as GameActivity).finish()
                 }
             }
+    */ if (lives <= 0) {
+
+            dialogTitle.text = context.getString(R.string.game_over_title)
+            dialogMessage.text = context.getString(R.string.game_over_message, score)
+
+            // YENİ: Oyunu Yeniden Başlat butonu
+            // R.string.restart yerine kendi string'inizi kullanabilirsiniz ("Oyunu Yeniden Başlat")
+            positiveButton.text = context.getString(R.string.restart)
+            negativeButton.visibility = View.VISIBLE
+            negativeButton.text = context.getString(R.string.main_menu_button)
+
+            // YENİ LİSTENER: Tamamen sıfırlama (Puan, hız, can, engeller)
+            positiveButton.setOnClickListener {
+                dialog.dismiss()
+                currentAlertDialog = null
+                resetGame() // <-- OYUNU İLK HALİNE GETİREN METOT
+            }
+
+            // Menüye Dön butonu aynı kalır
+            negativeButton.setOnClickListener {
+                dialog.dismiss()
+                currentAlertDialog = null
+                resetGame()
+                (context as GameActivity).finish()
+            }
+        }
+
+           /*
+            if (lives <= 0) {
+
+                // Eğer daha önce reklam gösteriminde hata yaşandıysa, kullanıcıya normal restart/menü seçeneklerini sun.
+                if (isAdError) {
+                    // HATA DURUMU: Normal Menüye Dön/Yeniden Başla akışı
+                    dialogTitle.text = context.getString(R.string.game_over_title)
+                    dialogMessage.text = context.getString(R.string.game_over_message, score)
+                    positiveButton.text = context.getString(R.string.yes_button)
+                    negativeButton.visibility = View.VISIBLE
+                    negativeButton.text = context.getString(R.string.no_button)
+
+                    // Yeniden Başlat (Restart)
+                    positiveButton.setOnClickListener {
+                        dialog.dismiss()
+                        currentAlertDialog = null
+                        resetGame()
+                    }
+                    // Menüye Dön
+                    negativeButton.setOnClickListener {
+                        dialog.dismiss()
+                        currentAlertDialog = null
+                        resetGame()
+                        (context as GameActivity).finish()
+                    }
+                } else {
+                    // NORMAL AKIŞ: Skor Çarpanı Seçeneği Sunulur
+                    dialogTitle.text = context.getString(R.string.game_over_title)
+                    dialogMessage.text = context.getString(R.string.game_over_message, score)
+                    positiveButton.text = context.getString(R.string.doubleScoreAd) // "Reklamla Skoru İki Katla"
+                    negativeButton.visibility = View.VISIBLE
+                    negativeButton.text = context.getString(R.string.main_menu_button) // "Menüye Dön"
+
+                    // Skoru kaydet (Çarpan uygulanmadan önceki skor)
+                    finalScoreBeforeMultiplier = score
+                    (context as GameActivity).saveHighScore(finalScoreBeforeMultiplier)
+
+                    // Reklam İzle ve Skoru İkiye Katla
+                    positiveButton.setOnClickListener {
+                        dialog.dismiss()
+                        currentAlertDialog = null
+                        setPaused(true) // Oyunun durduğundan emin ol
+                        (context as GameActivity).showRewardedAdForScore()
+                    }
+                    // Menüye Dön
+                    negativeButton.setOnClickListener {
+                        dialog.dismiss()
+                        currentAlertDialog = null
+                        resetGame()
+                        (context as GameActivity).finish()
+                    }
+                }
+            } */
             dialog.setCancelable(false)
             dialog.show()
         }
@@ -626,23 +756,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
         }
     }
 
-    private fun resetGame() {
-        score = 0
-        lives = 3
-        level = 1
-        previousScoreForLevel = 0
-        obstacleSpeed = 5f
-        characterY = (screenHeight / 2).toFloat()
-        characterVelocity = 0f
-        obstacles.clear()
-        createInitialObstacles()
-        isGameOver = false
-        isPlaying = true
-        thread = Thread(this)
-        thread?.start()
-        isReady = true
-    }
-
     fun setPaused(paused: Boolean) {
         isPaused = paused
         if (paused) {
@@ -670,5 +783,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback,
 
     fun setSavedObstacleSpeed(speed: Float) {
         savedObstacleSpeed = speed
+    }
+
+    // Reklam ile skoru ikiye katlamak için kullanılır
+    fun grantScoreMultiplier() {
+        // 1. Skoru ikiye katla
+        score = finalScoreBeforeMultiplier * 2
+        (context as GameActivity).saveHighScore(score)
+        Log.d("ScoreFlow", "Skor İkiye Katlandı: Yeni Skor -> $score")
+
+        // 2. Oyunu tam olarak sıfırla ve Menüye dön (Artık can kalmamıştır)
+        (context as GameActivity).runOnUiThread {
+            Toast.makeText(context, R.string.ScoreMultiplier, Toast.LENGTH_LONG).show()
+        }
+        resetGame()
+        (context as GameActivity).finish() // GameActivity'i kapat ve Ana Menüye dön
     }
 }

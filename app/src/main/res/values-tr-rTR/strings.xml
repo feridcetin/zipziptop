@@ -63,5 +63,9 @@
     <string name="scoreboard_title">Skor Tablosu</string>
     <string name="showRewardedAd">Karakteriniz başarıyla kaydedildi!</string>
     <string name="showRewardedAdElse">Reklam henüz hazır değil. Lütfen biraz bekleyin.</string>
+    <string name="ScoreMultiplier">Skorunuz İkiye Katlandı!</string>
+    <string name="doubleScoreAd">Reklamla Skoru İki Katla</string>
+    <string name="restart">Oyunu Yeniden Başlat</string>
+    <string name="interstitial_ad_unit_id">ca-app-pub-2120666198065087/4581061889</string>
 
 </resources>
